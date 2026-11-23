@@ -59,6 +59,8 @@ fn unknown_target_has_actionable_error() {
 #[test]
 fn urls_cover_feature_and_lite_combinations() {
     for (_, arch, _) in TARGETS {
+        // sharun is embedded on x86_64 only, whatever the features
+        let extra = usize::from(arch == "x86_64");
         let squash_only = asset_urls(
             arch,
             BuildFeatures {
@@ -67,7 +69,7 @@ fn urls_cover_feature_and_lite_combinations() {
                 lite: false,
             },
         );
-        assert_eq!(squash_only.len(), 3);
+        assert_eq!(squash_only.len(), 3 + extra);
         assert!(squash_only.iter().any(|a| a
             .url
             .ends_with(&format!("/squashfuse-musl-mimalloc-{arch}"))));
@@ -86,7 +88,7 @@ fn urls_cover_feature_and_lite_combinations() {
                 lite: true,
             },
         );
-        assert_eq!(squash_lite.len(), 2);
+        assert_eq!(squash_lite.len(), 2 + extra);
         assert!(!squash_lite.iter().any(|a| a.name == "mksquashfs"));
 
         let dwarfs_full = asset_urls(
@@ -97,7 +99,7 @@ fn urls_cover_feature_and_lite_combinations() {
                 lite: false,
             },
         );
-        assert_eq!(dwarfs_full.len(), 1);
+        assert_eq!(dwarfs_full.len(), 1 + extra);
         assert_eq!(dwarfs_full[0].name, "dwarfs-universal");
         assert!(dwarfs_full[0]
             .url
@@ -111,7 +113,7 @@ fn urls_cover_feature_and_lite_combinations() {
                 lite: true,
             },
         );
-        assert_eq!(dwarfs_lite.len(), 1);
+        assert_eq!(dwarfs_lite.len(), 1 + extra);
         assert_eq!(dwarfs_lite[0].name, "dwarfs-fuse-extract");
         assert!(dwarfs_lite[0].url.ends_with(&format!(
             "/dwarfs-fuse-extract-{DWARFS_VERSION}-Linux-{arch}"
@@ -125,7 +127,7 @@ fn urls_cover_feature_and_lite_combinations() {
                 lite: false,
             },
         );
-        assert_eq!(full.len(), 4);
+        assert_eq!(full.len(), 4 + extra);
         let lite = asset_urls(
             arch,
             BuildFeatures {
@@ -134,7 +136,7 @@ fn urls_cover_feature_and_lite_combinations() {
                 lite: true,
             },
         );
-        assert_eq!(lite.len(), 3);
+        assert_eq!(lite.len(), 3 + extra);
     }
 }
 
@@ -372,7 +374,7 @@ fn exact_executable_type_is_enforced() {
 #[test]
 fn digest_manifest_is_sorted_unique_and_covers_every_remote_asset() {
     let records = digest_records().unwrap();
-    assert_eq!(records.len(), 30);
+    assert_eq!(records.len(), 31);
     assert!(records.windows(2).all(|pair| {
         (pair[0].arch.as_str(), pair[0].name.as_str())
             < (pair[1].arch.as_str(), pair[1].name.as_str())
@@ -415,7 +417,7 @@ fn digest_manifest_is_sorted_unique_and_covers_every_remote_asset() {
         );
         sources.insert(lite[0].url.clone());
     }
-    assert_eq!(sources.len(), 30);
+    assert_eq!(sources.len(), 31);
 }
 
 #[test]

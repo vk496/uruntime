@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- On x86_64, images now start on Linux kernels before 2.6.16, which lack `openat` and the other `*at` syscalls that the bundled extractor (libarchive) and every glibc program need. When an `openat` probe fails, the runtime relaunches itself once under the bundled `sharun --compat-exec`, whose old kernel compatibility layer translates them. Kernels that have `openat` are unaffected: the probe succeeds and nothing is relaunched. Adds one embedded helper (`sharun`, x86_64 only).
+
 ## [0.8.5] - 2026-11-21
 
 ### Fixed

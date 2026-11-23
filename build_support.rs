@@ -15,6 +15,9 @@ use tempfile::{Builder as TempBuilder, NamedTempFile};
 use xxhash_rust::xxh64::xxh64;
 
 pub const DWARFS_VERSION: &str = "0.15.10";
+/// sharun, embedded on x86_64 only: it runs the runtime and its helpers on kernels
+/// that lack the `*at` syscalls (before Linux 2.6.16).
+pub const SHARUN_VERSION: &str = "3.9.0";
 
 pub const SQUASHFS_TOOLS_VERSION: &str = "4.7.5.r2";
 pub const SQUASHFUSE_VERSION: &str = "0.6.5";
@@ -255,7 +258,7 @@ pub fn all_asset_sources() -> Vec<AssetSource> {
         "powerpc64-unknown-linux-musl",
         "powerpc64le-unknown-linux-musl",
     ];
-    let mut sources = Vec::with_capacity(30);
+    let mut sources = Vec::with_capacity(31);
     for target_name in TARGETS {
         let target = target_spec(target_name).expect("static target table must be valid");
         let arch = target.release_arch;
@@ -297,6 +300,13 @@ pub fn all_asset_sources() -> Vec<AssetSource> {
             },
         ]);
     }
+    sources.push(AssetSource {
+        target: target_spec("x86_64-unknown-linux-musl").expect("static target table must be valid"),
+        name: "sharun",
+        url: format!("https://github.com/pkgforge-dev/Anylinux-sharun/releases/download/{SHARUN_VERSION}/sharun-x86_64"),
+        kind: AssetKind::Direct,
+        elf_type: ElfType::StaticExec,
+    });
     sources.sort_by(|left, right| {
         (left.target.release_arch, left.name).cmp(&(right.target.release_arch, right.name))
     });
@@ -344,6 +354,9 @@ pub fn asset_urls(release_arch: &str, features: BuildFeatures) -> Vec<Asset> {
         } else {
             "dwarfs-universal"
         });
+    }
+    if release_arch == "x86_64" {
+        names.push("sharun");
     }
     names.into_iter().map(|name| asset(find(name))).collect()
 }
@@ -865,6 +878,7 @@ fn source_cache_component(name: &str) -> Result<String, String> {
         "squashfuse" => Ok(format!("squashfuse-{SQUASHFUSE_VERSION}")),
         "unsquashfs" | "mksquashfs" => Ok(format!("squashfs-tools-{SQUASHFS_TOOLS_VERSION}")),
         "dwarfs-universal" | "dwarfs-fuse-extract" => Ok(format!("dwarfs-{DWARFS_VERSION}")),
+        "sharun" => Ok(format!("sharun-{SHARUN_VERSION}")),
         _ => Err(format!("unknown helper source `{name}`")),
     }
 }

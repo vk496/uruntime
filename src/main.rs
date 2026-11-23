@@ -328,6 +328,8 @@ struct Embed {
     mksquashfs: &'static [u8],
     #[cfg(feature = "dwarfs")]
     dwarfs_universal: &'static [u8],
+    #[cfg(target_arch = "x86_64")]
+    sharun: &'static [u8],
 }
 
 impl Embed {
@@ -349,7 +351,18 @@ impl Embed {
                 env!("URUNTIME_HELPER_DIR"),
                 "/dwarfs-universal-zst"
             )),
+            #[cfg(target_arch = "x86_64")]
+            sharun: include_bytes!(concat!(env!("URUNTIME_HELPER_DIR"), "/sharun-zst")),
         }
+    }
+
+    /// Run `exec_args` (a command line, program first) under sharun's old kernel
+    /// compatibility layer. Replaces the process.
+    #[cfg(target_arch = "x86_64")]
+    fn sharun_compat_exec(&self, exec_args: Vec<String>) {
+        let mut args = vec!["--compat-exec".to_string()];
+        args.extend(exec_args);
+        mfd_exec("sharun", self.sharun, args);
     }
 
     #[cfg(feature = "squashfs")]
@@ -396,6 +409,36 @@ impl Embed {
     fn dwarfsextract(&self, exec_args: Vec<String>) {
         mfd_exec("dwarfsextract", self.dwarfs_universal, exec_args);
     }
+}
+
+/// Kernels before 2.6.16 have no `openat` and the other `*at` syscalls, which
+/// every helper (libarchive, FUSE, the application's own libc) uses to open and
+/// create files, so the image cannot even be extracted there. When the kernel
+/// lacks them, run this runtime again under sharun's compatibility layer, which
+/// translates them to the plain calls. The layer then covers the helpers and the
+/// application they start. The environment guard keeps a sharun that cannot trace
+/// (no ptrace) from relaunching forever.
+#[cfg(target_arch = "x86_64")]
+fn relaunch_without_at_syscalls(embed: &Embed, arg0: &str, args: &[String]) {
+    const GUARD: &str = "URUNTIME_COMPAT_RELAUNCHED";
+    if env::var_os(GUARD).is_some() {
+        return;
+    }
+    // A pre-2.6.19 kernel can answer an unknown syscall with its own number
+    // instead of -ENOSYS, so both count as "missing".
+    let nr = libc::SYS_openat;
+    let rc = unsafe { libc::syscall(nr, libc::AT_FDCWD, c"/".as_ptr(), libc::O_RDONLY, 0) };
+    let missing = rc == nr || (rc == -1 && Errno::last() == Errno::ENOSYS);
+    if rc >= 0 && !missing {
+        unsafe { libc::close(rc as libc::c_int) };
+    }
+    if !missing {
+        return;
+    }
+    env::set_var(GUARD, "1");
+    let mut exec_args = vec![arg0.to_string()];
+    exec_args.extend(args.iter().cloned());
+    embed.sharun_compat_exec(exec_args);
 }
 
 fn mfd_exec(exec_name: &str, exec_bytes: &[u8], exec_args: Vec<String>) {
@@ -4597,6 +4640,9 @@ fn main() {
         }
         _ => {}
     }
+
+    #[cfg(target_arch = "x86_64")]
+    relaunch_without_at_syscalls(&embed, &arg0, &exec_args);
 
     let unshare_cli = parse_unshare_cli_options(&mut exec_args, ARG_PFX).unwrap_or_else(|error| {
         eprintln!("Invalid unshare option: {error}");
