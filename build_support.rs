@@ -17,7 +17,7 @@ use xxhash_rust::xxh64::xxh64;
 pub const DWARFS_VERSION: &str = "0.15.10";
 /// sharun, embedded on x86_64 only: it runs the runtime and its helpers on kernels
 /// that lack the `*at` syscalls (before Linux 2.6.16).
-pub const SHARUN_VERSION: &str = "3.9.0";
+pub const SHARUN_VERSION: &str = "3.9.0-oldkernels.1";
 
 pub const SQUASHFS_TOOLS_VERSION: &str = "4.7.5.r2";
 pub const SQUASHFUSE_VERSION: &str = "0.6.5";
@@ -303,7 +303,7 @@ pub fn all_asset_sources() -> Vec<AssetSource> {
     sources.push(AssetSource {
         target: target_spec("x86_64-unknown-linux-musl").expect("static target table must be valid"),
         name: "sharun",
-        url: format!("https://github.com/pkgforge-dev/Anylinux-sharun/releases/download/{SHARUN_VERSION}/sharun-x86_64"),
+        url: format!("https://github.com/vk496/Anylinux-sharun/releases/download/{SHARUN_VERSION}/sharun-x86_64"),
         kind: AssetKind::Direct,
         elf_type: ElfType::StaticExec,
     });

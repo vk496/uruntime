@@ -310,7 +310,7 @@ checksum = "5d15f86d12da44cd8d4ec3c73984537eb7f4cadcb9776a575a0a8a05ca11005c"
 [[package]]
 name = "memfd-exec"
 version = "0.2.7"
-source = "git+https://github.com/VHSgunzo/memfd-exec.git?rev=5a94a9c44f4e8a6ea74ce60d81f9e89c5557b505#5a94a9c44f4e8a6ea74ce60d81f9e89c5557b505"
+source = "git+https://github.com/vk496/memfd-exec.git?rev=1a59094911400f740d7ad8ee0f0f7748b2617770#1a59094911400f740d7ad8ee0f0f7748b2617770"
 dependencies = [
  "libc",
  "nix",
